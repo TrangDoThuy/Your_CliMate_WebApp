@@ -1,0 +1,4 @@
+{
+    "mongoURI": "mongodb+srv://YourClimate:YL9l0FainAAxsWMB@getstart.yi6xd.mongodb.net/datalake?retryWrites=true&w=majority",
+    "jwtSecret": "mySecretToken"
+}
