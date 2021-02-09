@@ -419,3 +419,267 @@ export default Login
 
 ```
 
+## Getting Started with Redux
+### 1. Creating a Redux store:
+
+- Inside src folder create a file named: store.js
+
+```
+import {createStore, applyMiddleware} from 'redux';
+import { composeWithDevTools} from 'redux-devtools-extension';
+import thunk from 'redux-thunk';
+import rootReducer from './reducers';
+
+const initialState = {};
+
+const middleware =[ thunk ];
+
+const store = createStore(
+    rootReducer,
+    initialState,
+    composeWithDevTools(applyMiddleware(...middleware))
+    );
+
+export default store;
+```
+
+- I am not quite sure about Redux, so I will add more if I find any information
+
+- Inside src create a folder named: reducers, and inside that create a file named index.js
+
+```
+import {combineReducers} from 'redux';
+
+export default combineReducers({});
+```
+
+- Inside App.js file, import 2 lines:
+
+```
+// Redux 
+import { Provider} from 'react-redux';
+import store from './store';
+```
+
+- And wrap everthing with Provider
+
+```
+import React, { Fragment } from 'react';
+import {BrowserRouter as Router, Route,Switch} from 'react-router-dom'
+import Navbar from './components/layout/Navbar';
+import Landing from './components/layout/Landing';
+import Register from './components/auth/Register';
+import Login from './components/auth/Login';
+import './App.css';
+
+// Redux 
+import { Provider} from 'react-redux';
+import store from './store';
+
+const App = () =>( 
+  <Provider store = {store}>
+    <Router>
+      <Fragment> 
+        <Navbar/>
+        <Route exact path = '/' component = {Landing}/>
+        <section className = "container">
+          <Switch>
+            <Route exact path ="/register" component = {Register}/>
+            <Route exact path ="/login" component = {Login}/>
+          </Switch>
+        </section>
+      </Fragment>
+    </Router>
+  </Provider>
+);
+
+export default App;
+
+```
+
+- Alright, now you can open the website page that you are building, view Inspect and find Redux part (you may need to install the Redux extension before). Have a look and we will explore more.
+
+
+### 2. Alert Reducer, Action & Types:
+
+- Inside reducers folder, create a file named alert.js
+
+```
+import { SET_ALERT, REMOVE_ALERT} from '../actions/types';
+const initialState = [];
+
+export default function(state = initialState, action){
+    switch(action.type){
+        case SET_ALERT:
+            return [...state, action.payload]
+        case REMOVE_ALERT:
+            return state.filter(alert=>alert.id !==payload)
+        default:
+            return state;
+    }
+}
+```
+
+- Inside folder src, create folder actions, and file types.js inside:
+
+```
+export const SET_ALERT = 'SET_ALERT';
+export const REMOVE_ALERT = 'REMOVE_ALERT';
+```
+
+- We have small change in  index.js file in reducers folder:
+
+```
+import {combineReducers} from 'redux';
+import alert from './alert';
+
+export default combineReducers({
+    alert
+});
+```
+
+- Move to client folder and install uuid : I dont know why
+
+```
+npm i uuid
+```
+
+- In action folder, create an alert file:
+
+```
+import {SET_ALERT, REMOVE_ALERT} from './types';
+import uuid from ' uuid';
+
+export const setAlert =  (msg, alertType) => dispatch =>{
+    const id = uuid.v4();
+    dispatch({
+        type: SET_ALERT,
+        payload: {msg, alertType,id}
+    });
+};
+```
+
+### 3. Alert Component and Action Call
+
+Now, I can understand that Redux like a alert when we use HTML and javascript.
+
+- Create a Alert file in layours folder:
+
+```
+import React from 'react'
+import PropTypes from 'prop-types'
+import {connect} from ' react-redux';
+
+const Alert = ({alerts}) => alerts !== null && alerts.length >0 && alerts.map(alert=>(
+    <div key = {alert.id} className = {`alert alert-${alert.alertType}`}>
+        {alert.msg}
+    </div>
+));
+Alert.propTypes = {
+    alerts: PropTypes.array.isRequired
+}
+
+const mapStateToProps = state =>({
+    alerts: state.alert
+});
+export default connect()(Alert);
+
+```
+
+- Then add Alert into file App.js
+
+- In Register file:
+
+```
+import {connect} from 'react-redux';
+import {setAlert} from '../../actions/alert';
+```
+
+```
+export default connect(
+    null, 
+    {setAlert}
+)(Register);
+```
+
+- There will be alert if the user types wrong password. Now we will set timeout to make this alert disappear. In the actions folder, in file alert.js, we add function setTimeout
+
+```
+import {SET_ALERT, REMOVE_ALERT} from './type';
+import {v4 as uuid} from 'uuid';
+
+export const setAlert =  (msg, alertType) => dispatch =>{
+    const id = uuid();
+    dispatch({
+        type: SET_ALERT,
+        payload: {msg, alertType,id}
+    });
+
+    setTimeout(() =>dispatch({type: REMOVE_ALERT, payload:id}),5000);
+};
+```
+
+Cool! We have first hand experience in Redux. When I learn more, I will add more about Redux for this Readme file
+
+## React User Authentication:
+
+We keep explore more with Redux
+
+- Create file auth.js in reducers folder:
+```
+import { 
+    REGISTER_SUCCESS,
+    REGISTER_FAIL
+} from ' ../actions/types';
+
+const initialState ={
+    token: localStorage.getItem('token'),
+    isAuthenticated: null,
+    loading: true,
+    user: null
+}
+
+export default function(state = initialState,action){
+    const {type,payload} = action;
+    switch(type){
+        case REGISTER_SUCCESS:
+            LocalStorage.setItem('token',payload.token);
+            return{
+                ...state,
+                ...payload,
+                isAuthenticated: true,
+                loading: false
+            }
+        case REGISTER_FAIL:
+            localStorage.removeItem('token');
+            return{
+                ...state,
+                token: null,
+                isAuthenticated: false,
+                loading: false
+            }
+        default:
+            return state;
+    }
+}
+```
+
+I start to see that Redux helps to manage the state. For example: above has 2 states: REGISTER_SUCCESS and REGISTER_FAIL
+- Add action into type.js in actions file:
+
+```
+export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+export const REGISTER_FAIL = 'REGISTER_FAIL';
+```
+
+- Create a file auth.js in folder src
+
+
+
+
+
+
+
+
+
+
