@@ -21,6 +21,10 @@ const Register = () => {
             console.log('success');
         }
     }
+
+
+
+    
     return (
         <Fragment>
             <h1 className="large text-primary">Sign Up</h1>
