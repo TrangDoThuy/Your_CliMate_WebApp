@@ -1330,6 +1330,217 @@ export default connect(mapStateToProps, {logout})(Navbar);
 
 // at the beginning, I think frontend is super easy, but now, It is sooo hard =)))))
 
+- Under folder Component, create folder `routing` and create a file `PrivateRounte.js`
+
+```
+import React from 'react';
+import {Route,Redirect} from 'react-router-dom';
+import PropTypes from 'prop-types';
+import {connect} from 'react-redux';
+
+const PrivateRoute = ({component: Component,auth:{isAuthenticated, loading},
+     ...rest}) => (
+    <Route {... rest} render = {props => !isAuthenticated && !loading ? (<Redirect to ='/login'/>):(<Component{...props}/>)}/>
+)
+
+PrivateRoute.propTypes = {
+    auth: PropTypes.object.isRequired,
+}
+
+const mapStateToProps = state => ({
+    auth: state.auth
+})
+export default connect(mapStateToProps)(PrivateRoute)
+
+```
+
+- in App.js file app a PrivateRoute
+
+```
+            <PrivateRoute exact path ="/dashboard" component = {Dashboard}/>
+```
+
+I dont know why my Redirect doesnt work. I will consider it later.
+
+### 2. Profile reducer & get current profile:
+
+- Create a profile.js in reducer:
+
+```
+const initialState = {
+    profile: null,
+    profiles: [],
+    repos: [],
+    loading: true,
+    error: {}
+}
+
+export default function (state = initialState,action){
+    const {type, payload} = action;
+
+    switch(type){
+        case GET_PROFILE:
+            return {
+                ...state, 
+                profile: payload,
+                loading: false
+            }
+        case PROFILE_ERROR:
+            return {
+                ...state,
+                error: payload,
+                loading: false
+            };
+        default:
+            return state;
+    }
+}
+```
+
+- Add 2 lines into `actions/type.js`
+
+```
+export const GET_PROFILE = 'GET_PROFILE';
+export const PROFILE_ERROR = 'PROFILE_ERROR';
+```
+
+- Create a profile.js in actions folder to make request for backend
+
+```
+import axios from 'axios';
+import {setAlert} from './alert';
+
+import{
+    GET_PROFILE,
+    PROFILE_ERROR
+} from './type';
+
+//Get current users profile
+export const getCurrentUsersProfile = () => async dispatch =>{
+    try {
+        const res = await axios.get('/api/profile/me');
+        dispatch({
+            type: GET_PROFILE,
+            payload: res.data
+        });
+    } catch (err) {
+        dispatch({
+            type: PROFILE_ERROR,
+            payload: { msg: err.response.statusText, status: err.response.status}
+        });
+        
+    }
+}
+```
+- We are going to display profile in the Dashboard:
+
+```
+import React, { useEffect } from 'react';
+import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
+import { getCurrentUsersProfile} from '../../actions/profile';
+
+ const Dashboard = ({getCurrentUsersProfile,auth, profile}) => {
+    useEffect(()=>{
+        getCurrentUsersProfile();
+    }, []);
+
+    return (
+        <div>
+            Dashboard
+        </div>
+    )
+};
+
+Dashboard.propTypes = {
+    getCurrentUsersProfile: PropTypes.func.isRequired,
+    auth: PropTypes.object.isRequired,
+    profile: PropTypes.object.isRequired,
+};
+
+const mapStateToProps = state => ({
+    auth: state.auth,
+    profile: state.profile
+});
+
+export default connect(mapStateToProps, { getCurrentUsersProfile})(Dashboard);
+
+```
+
+### 3. Start with Dashboard
+
+- We have some changes in Landing.js so that when users logged in and then click homepage, they wont get the landing page but dashboard
+
+```
+import React from 'react';
+import {Link, Redirect} from 'react-router-dom';
+import { connect } from 'react-redux';
+import PropTypes from 'prop-types';
+
+export const Landing = ({isAuthenticated}) => {
+  if(isAuthenticated){
+    return <Redirect to = '/dashboard'/>
+  }
+  return (
+    <section className="landing">
+      <div className="dark-overlay">
+        <div className="landing-inner">
+          
+          <h1 className="x-large">Your CliMate</h1>
+          <p className="lead">
+          Connect with people and get the latest climate change news
+          </p>
+          <div className="buttons">
+            <Link to ="/register" className="btn btn-primary">Sign Up</Link>
+            <Link to ="/login" className="btn btn-light">Login</Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+};
+
+Landing.propTypes = {
+  isAuthenticated: PropTypes.bool
+}
+
+const mapStateToProps = state => ({
+  isAuthenticated: state.auth.isAuthenticated
+});
+
+export default connect(mapStateToProps)(Landing);
+
+```
+
+- We then add spinner when the page is loading: Create a spinner file in layout folder:
+
+```
+import React, { Fragment } from 'react';
+import spinner from './spinner.gif';
+
+export default () => (
+    <Fragment>
+        <img
+        src = {spinner}
+        style = {{width: '200px', margin: 'auto', display: 'block'}}
+        alt = 'loading...'
+        />
+    </Fragment>
+);
+```
+
+- We then have small change in return part of dashboard.js file
+
+```
+ const Dashboard = ({getCurrentUsersProfile,auth, profile:{ profile, loading}}) => {
+    useEffect(()=>{
+        getCurrentUsersProfile();
+    }, []);
+
+    return loading && profile == null ? <Spinner/>:<Fragment>test</Fragment>;
+};
+```
+
 
 
 
