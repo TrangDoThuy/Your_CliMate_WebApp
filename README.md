@@ -622,6 +622,7 @@ export const setAlert =  (msg, alertType) => dispatch =>{
 Cool! We have first hand experience in Redux. When I learn more, I will add more about Redux for this Readme file
 
 ## React User Authentication:
+### 1. Auth Reducer & Register Action
 
 We keep explore more with Redux
 
@@ -672,7 +673,267 @@ export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
 export const REGISTER_FAIL = 'REGISTER_FAIL';
 ```
 
-- Create a file auth.js in folder src
+- Create a file auth.js in folder action
+
+```
+import axios from 'axios';
+import {setAlert} from './alert';
+import{
+    REGISTER_SUCCESS,
+    REGISTER_FAIL
+} from './type';
+
+
+//Register User
+export const register = ({name,email,password}) => async dispatch =>{
+    const config = {
+        headers:{
+            'Content-Type': 'application/json'
+        }
+    }
+    const body = JSON.stringify({name,email,password});
+
+    try {
+        const res = await axios.post('/api/users',body,config);
+
+        dispatch({
+            type: REGISTER_SUCCESS,
+            payload: res.data
+        });
+    } catch (err) {
+        const errors = err.response.data.errors;
+        if(errors){
+            errors.forEach(error => dispatch(setAlert(error.msg,'danger')));
+        }
+        dispatch({
+            type: REGISTER_FAIL
+        });  
+    }
+    
+}
+```
+
+- We have small change in Register.js file, like what we did with setAlert:
+
+```
+import React, {Fragment, useState} from 'react';
+import {connect} from 'react-redux';
+import {Link} from 'react-router-dom';
+import {setAlert} from '../../actions/alert';
+import {register} from '../../actions/auth';
+import PropTypes from 'prop-types';
+
+const Register = ({setAlert, register}) => {
+    const [formData, setFormData] = useState({
+        name:'',
+        email:'',
+        password: '',
+        password2: '',
+    });
+    const{name, email, password, password2} = formData;
+
+    const onChange = e=> 
+        setFormData({...formData,[e.target.name]: e.target.value});
+
+    const onSubmit = async  e =>{
+        e.preventDefault();
+        if (password !== password2){
+            setAlert('Password do not match', ' danger',3000);
+        }else{
+            register({name,email,password});
+        }
+    };
+    
+    return (
+        <Fragment>
+            <h1 className="large text-primary">Sign Up</h1>
+            <p className="lead"><i className="fas fa-user"></i> Create Your Account</p>
+            <form className="form" onSubmit = { e=> onSubmit(e)}>
+                <div className="form-group">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        name="name" 
+                        value = {name}
+                        onChange = { e=> onChange(e)}
+                        required 
+                    />
+                </div>
+                <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value = {email}
+                        onChange = { e=> onChange(e)}
+                        required
+                    />
+                    <small className="form-text" >This site uses Gravatar so if you want a profile image, use a
+                        Gravatar email
+                    </small>
+                </div>
+                <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value = {password}
+                        onChange = { e=> onChange(e)}
+                        minLength="6"
+                    />
+                </div>
+                <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        name="password2"
+                        value = {password2}
+                        onChange = { e=> onChange(e)}
+                        minLength="6"
+                    />
+                </div>
+                <input type="submit" className="btn btn-primary" value="Register" />
+            </form>
+            <p className="my-1">
+                Already have an account? <Link to ="/login">Login</Link>
+            </p> 
+        </Fragment>
+    )
+};
+
+Register.propTypes = {
+    setAlert: PropTypes.func.isRequired,
+    register: PropTypes.func.isRequired
+};
+
+export default connect(
+    null, 
+    {setAlert, register}
+)(Register);
+
+```
+
+- Now you can check Register page
+
+### 2. Load User & Set Auth Token
+
+- Create a folder utils, then a file setAuthToken
+
+```
+import axios from 'axios';
+
+const setAuthToken = token =>{
+    if(token){
+        axios.defaults.headers.common['x-auth-token'] = token;
+    }else{
+        delete axios.defaults.headers.common['x-auth-token'];
+    }
+}
+
+export default setAuthToken;
+```
+
+- In the auth.js in reducers folder, we add case: USER_LOADED and AUTH_ERROR:
+
+```
+import { 
+    REGISTER_SUCCESS,
+    REGISTER_FAIL,
+    USER_LOADED,
+    AUTH_ERROR
+} from '../actions/type';
+
+const initialState ={
+    token: localStorage.getItem('token'),
+    isAuthenticated: null,
+    loading: true,
+    user: null
+}
+
+export default function(state = initialState,action){
+    const {type,payload} = action;
+    switch(type){
+        case USER_LOADED:
+            return{
+                ...state,
+                isAuthenticated:true,
+                loading:false,
+                user: payload
+            };
+        case REGISTER_SUCCESS:
+            localStorage.setItem('token',payload.token);
+            return{
+                ...state,
+                ...payload,
+                isAuthenticated: true,
+                loading: false
+            };
+        case REGISTER_FAIL:
+        case AUTH_ERROR:
+            localStorage.removeItem('token');
+            return{
+                ...state,
+                token: null,
+                isAuthenticated: false,
+                loading: false
+            }
+        default:
+            return state;
+    }
+}
+```
+
+- In App.js file: we have little change:
+
+```
+import React, { Fragment, useEffect } from 'react';
+import {BrowserRouter as Router, Route,Switch} from 'react-router-dom'
+import Navbar from './components/layout/Navbar';
+import Landing from './components/layout/Landing';
+import Register from './components/auth/Register';
+import Login from './components/auth/Login';
+import Alert from './components/layout/Alert';
+import './App.css';
+
+// Redux 
+import { Provider} from 'react-redux';
+import store from './store';
+import {loadUser} from './actions/auth';
+import setAuthToken from './utils/setAuthToken';
+
+if(localStorage.token){
+  setAuthToken(localStorage.token);
+}
+
+const App = () =>{
+  useEffect(()=>{
+    store.dispatch(loadUser)
+  }, []);
+  return( 
+  <Provider store = {store}>
+    <Router>
+      <Fragment> 
+        <Navbar/>
+        <Route exact path = '/' component = {Landing}/>
+        <section className = "container">
+          <Alert/>
+          <Switch>
+            <Route exact path ="/register" component = {Register}/>
+            <Route exact path ="/login" component = {Login}/>
+          </Switch>
+        </section>
+      </Fragment>
+    </Router>
+  </Provider>
+)};
+
+export default App;
+
+```
+
+
+
+
 
 
 
