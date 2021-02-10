@@ -931,7 +931,404 @@ export default App;
 
 ```
 
+I am not quite understand at all, but keep moving :))
 
+### 3. User Login
+
+- Like we did with register, you just need add this part in `src/actions/auth`
+
+```
+import axios from 'axios';
+import {setAlert} from './alert';
+import{
+    REGISTER_SUCCESS,
+    REGISTER_FAIL,
+    USER_LOADED,
+    AUTH_ERROR,
+    LOGIN_SUCCESS,
+    LOGIN_FAIL
+} from './type';
+import setAuthToken from '../utils/setAuthToken';
+
+//Load user: 
+export const loadUser = () =>async dispatch =>{
+    if(localStorage.token){
+        setAuthToken(localStorage.token);
+    }
+
+    try {
+        const res = await axios.get('/api/auth');
+        dispatch({
+            type: USER_LOADED,
+            payload: res.data
+        });
+    } catch (err) {
+        dispatch({
+            type: AUTH_ERROR,
+        });        
+    }
+};
+
+
+//Register User
+export const register = ({name,email,password}) => async dispatch =>{
+    const config = {
+        headers:{
+            'Content-Type': 'application/json'
+        }
+    }
+    const body = JSON.stringify({name,email,password});
+
+    try {
+        const res = await axios.post('/api/users',body,config);
+
+        dispatch({
+            type: REGISTER_SUCCESS,
+            payload: res.data
+        });
+
+        dispatch(loadUser());
+    } catch (err) {
+        const errors = err.response.data.errors;
+        if(errors){
+            errors.forEach(error => dispatch(setAlert(error.msg,'danger')));
+        }
+        dispatch({
+            type: REGISTER_FAIL
+        });  
+    }
+    
+}
+
+
+//Login User
+export const login = (email,password) => async dispatch =>{
+    const config = {
+        headers:{
+            'Content-Type': 'application/json'
+        }
+    }
+    const body = JSON.stringify({email,password});
+
+    try {
+        const res = await axios.post('/api/auth',body,config);
+
+        dispatch({
+            type: LOGIN_SUCCESS,
+            payload: res.data
+        });
+
+        dispatch(loadUser());
+    } catch (err) {
+        const errors = err.response.data.errors;
+        if(errors){
+            errors.forEach(error => dispatch(setAlert(error.msg,'danger')));
+        }
+        dispatch({
+            type: LOGIN_FAIL
+        });  
+    }
+    
+}
+```
+- Then go to reducers/auth.js, we just add `LOGIN_SUCCESS` and `LOGIN_FAIL` 
+
+```
+import { 
+    REGISTER_SUCCESS,
+    REGISTER_FAIL,
+    USER_LOADED,
+    AUTH_ERROR,
+    LOGIN_SUCCESS,
+    LOGIN_FAIL
+} from '../actions/type';
+
+const initialState ={
+    token: localStorage.getItem('token'),
+    isAuthenticated: null,
+    loading: true,
+    user: null
+}
+
+export default function(state = initialState,action){
+    const {type,payload} = action;
+    switch(type){
+        case USER_LOADED:
+            return{
+                ...state,
+                isAuthenticated:true,
+                loading:false,
+                user: payload
+            };
+        case REGISTER_SUCCESS:
+        case LOGIN_SUCCESS:
+            localStorage.setItem('token',payload.token);
+            return{
+                ...state,
+                ...payload,
+                isAuthenticated: true,
+                loading: false
+            };
+        case REGISTER_FAIL:
+        case AUTH_ERROR:
+        case LOGIN_FAIL:
+            localStorage.removeItem('token');
+            return{
+                ...state,
+                token: null,
+                isAuthenticated: false,
+                loading: false
+            }
+        default:
+            return state;
+    }
+}
+```
+- We have new variable name `isAuthenticated`, then login file will change like this
+
+to redirect to dashboard when user successfully logged in
+
+```
+import React, {Fragment, useState} from 'react';
+import {Link, Redirect} from 'react-router-dom';
+import {connect} from 'react-redux';
+import PropTypes from 'prop-types';
+import {login} from '../../actions/auth';
+
+const Login = ({login, isAuthenticated}) => {
+    const [formData, setFormData] = useState({
+        email:'',
+        password: '',
+    });
+    const{email, password} = formData;
+
+    const onChange = e=> 
+        setFormData({...formData,[e.target.name]: e.target.value});
+
+    const onSubmit = async  e =>{
+        e.preventDefault();
+        login(email, password);
+    };
+    // Redirect is logged in
+    if(isAuthenticated){
+        return <Redirect to = '/dashboard'/>
+    }
+    return (
+        <Fragment>
+            <h1 className="large text-primary">Login</h1>
+            <p className="lead">
+                <i className="fas fa-user"/> Login with your account</p>
+            <form className="form" onSubmit = { e=> onSubmit(e)}>
+                <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value = {email}
+                        onChange = { e=> onChange(e)}
+                        required
+                    />
+                </div>
+                <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value = {password}
+                        onChange = { e=> onChange(e)}
+                        minLength="6"
+                    />
+                </div>
+                <input type="submit" className="btn btn-primary" value="Login" />
+            </form>
+            <p className="my-1">
+                Don't have an account? <Link to="/register">Sign Up</Link>
+            </p> 
+        </Fragment>
+    )
+}
+
+Login.propTypes = {
+    login: PropTypes.func.isRequired,
+    isAuthenticated: PropTypes.bool,
+}
+
+const mapStateToProps = state => ({
+    isAuthenticated: state.auth.isAuthenticated
+})
+
+export default connect(null,{login})(Login);
+
+```
+
+- We also have a small change in `conponent/auth/Register.js` to redirect to dashboard when user successfully signed in
+
+```
+import React, {Fragment, useState} from 'react';
+import {connect} from 'react-redux';
+import {Link, Redirect} from 'react-router-dom';
+import {setAlert} from '../../actions/alert';
+import {register} from '../../actions/auth';
+import PropTypes from 'prop-types';
+
+const Register = ({setAlert, register, isAuthenticated}) => {
+    const [formData, setFormData] = useState({
+        name:'',
+        email:'',
+        password: '',
+        password2: '',
+    });
+    const{name, email, password, password2} = formData;
+
+    const onChange = e=> 
+        setFormData({...formData,[e.target.name]: e.target.value});
+
+    const onSubmit = async  e =>{
+        e.preventDefault();
+        if (password !== password2){
+            setAlert('Password do not match', ' danger',3000);
+        }else{
+            register({name,email,password});
+        }
+    };
+
+    if(isAuthenticated){
+        return <Redirect to = '/dashboard'/>
+    }
+    
+    return (
+        <Fragment>
+            <h1 className="large text-primary">Sign Up</h1>
+            <p className="lead"><i className="fas fa-user"></i> Create Your Account</p>
+            <form className="form" onSubmit = { e=> onSubmit(e)}>
+                <div className="form-group">
+                    <input 
+                        type="text" 
+                        placeholder="Name" 
+                        name="name" 
+                        value = {name}
+                        onChange = { e=> onChange(e)}
+                        // required 
+                    />
+                </div>
+                <div className="form-group">
+                    <input 
+                        type="email" 
+                        placeholder="Email Address" 
+                        name="email" 
+                        value = {email}
+                        onChange = { e=> onChange(e)}
+                        // required
+                    />
+                    <small className="form-text" >This site uses Gravatar so if you want a profile image, use a
+                        Gravatar email
+                    </small>
+                </div>
+                <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        value = {password}
+                        onChange = { e=> onChange(e)}
+                        // minLength="6"
+                    />
+                </div>
+                <div className="form-group">
+                    <input
+                        type="password"
+                        placeholder="Confirm Password"
+                        name="password2"
+                        value = {password2}
+                        onChange = { e=> onChange(e)}
+                        // minLength="6"
+                    />
+                </div>
+                <input type="submit" className="btn btn-primary" value="Register" />
+            </form>
+            <p className="my-1">
+                Already have an account? <Link to ="/login">Login</Link>
+            </p> 
+        </Fragment>
+    )
+};
+
+Register.propTypes = {
+    setAlert: PropTypes.func.isRequired,
+    register: PropTypes.func.isRequired,
+    isAuthenticated: PropTypes.bool
+};
+const mapStateToProps = state => ({
+    isAuthenticated: state.auth.isAuthenticated
+})
+
+export default connect(
+    mapStateToProps, 
+    {setAlert, register}
+)(Register);
+
+```
+
+### 4. Logout & Navbar links
+
+- We need to change the Navbar.js, and we will have 2 link for user and for guest. That's cool
+
+For user, we will have button to logout.
+
+```
+import React, { Fragment} from 'react';
+import {Link} from 'react-router-dom'
+import { connect} from 'react-redux';
+import PropTypes from 'prop-types';
+import {logout} from '../../actions/auth';
+
+const Navbar = ({auth:{isAuthenticated,loading},logout}) => {
+    const authLinks = (
+        <ul>
+            <li>
+                <a onClick = {logout} href ='/#!'>
+                    <i className = "fas fa-sign-out-alt"></i>{' '}
+                    <span className ="hide-sm">Logout</span>
+                </a>
+            </li>
+        </ul>
+    );
+    const guestLinks = (
+        <ul>
+            <li><Link to ="/#!">Environmentalist</Link></li>
+            <li><Link to ="/register">Register</Link></li>
+            <li><Link to ="/login">Login</Link></li>
+        </ul>
+    );
+    return (
+        <nav className="navbar bg-dark">
+            <h1>
+                <Link to = '/'>
+                    <i className="fas fa-code"/> Your CliMate
+                </Link>
+            </h1>
+        {!loading&&(<Fragment>{isAuthenticated? authLinks:guestLinks}</Fragment>)}
+        </nav>
+    );
+};
+Navbar.propTypes ={
+    logout: PropTypes.func.isRequired,
+    auth: PropTypes.object.isRequired
+}
+const mapStateToProps = state =>({
+    auth: state.auth
+});
+
+export default connect(mapStateToProps, {logout})(Navbar);
+
+```
+- Next we are moving to dashboard, I hope to apply the articles part here :))
+
+## Dashboard & Profile Management
+
+### 1. Protected Route for Dashboard
+
+// at the beginning, I think frontend is super easy, but now, It is sooo hard =)))))
 
 
 
