@@ -1781,18 +1781,18 @@ import { Link } from 'react-router-dom';
 
 const DashboardActions = () => {
     return (
-        <div class="dash-buttons">
+        <div className="dash-buttons">
 
             <Link to="/edit-profile" class="btn btn-light">
-                <i class="fas fa-user-circle text-primary"></i> Edit Profile
+                <i className="fas fa-user-circle text-primary"></i> Edit Profile
             </Link>
 
             <Link to="/add-experience" class="btn btn-light">
-                <i class="fab fa-black-tie text-primary"></i> Add Experience
+                <i className="fab fa-black-tie text-primary"></i> Add Experience
             </Link>
 
             <Link to="/add-education" class="btn btn-light">
-                <i class="fas fa-graduation-cap text-primary"></i> Add Education
+                <i className="fas fa-graduation-cap text-primary"></i> Add Education
             </Link>
 
         </div>
@@ -1803,6 +1803,312 @@ const DashboardActions = () => {
 export default DashboardActions
 
 ```
+
+- We add `/edit-profile` route in `App.js`. IÍt quite similar to `/create-profile`,but we have some information have already filled.
+
+This part
+
+```
+    useEffect(()=>{
+        getCurrentProfile();
+
+        setFormData({
+            company: loading || !profile.company ? '':profile.company,
+            location: loading || !profile.location ? '':profile.location,
+            status: loading || !profile.status ? '':profile.status,
+            intro: loading || !profile.intro ? '':profile.intro,
+            interested: loading || !profile.interested ? '':profile.interested,
+            youtube: loading || !profile.youtube ? '':profile.youtube,
+            facebook: loading || !profile.facebook ? '':profile.facebook,
+            twitter: loading || !profile.twitter ? '':profile.twitter,
+            instagram: loading || !profile.instagram ? '':profile.instagram,
+            linkedin: loading || !profile.linkedin ? '':profile.linkedin,
+        });
+    }, [loading]);
+```
+
+it is related to Hook because It uses useEffect, I havent read about it.
+
+```
+import EditProfile from './components/profile-forms/EditProfile';
+```
+
+```
+ <PrivateRoute exact path ="/edit-profile" component = {EditProfile}/>
+```
+
+- Then add a component `EditProfile`:
+
+```
+import React, { Fragment, useState, useEffect } from 'react';
+import { Link, withRouter } from 'react-router-dom';
+import PropTypes from 'prop-types';
+import { connect } from 'react-redux';
+import { createProfile, getCurrentProfile } from '../../actions/profile';
+
+const EditProfile = ({
+    profile:{profile, loading},
+    createProfile,
+    getCurrentProfile, 
+    history
+}) => {
+    const [formData, setFormData] = useState({
+        company: '',
+        location: '',
+        status: '',
+        intro: '',
+        interested: '',
+        youtube: '',
+        facebook: '',
+        twitter: '',
+        instagram: '',
+        linkedin: ''
+    });
+
+    const [displaySocialInputs, toggleSocialInputs] = useState(true);
+
+    useEffect(()=>{
+        getCurrentProfile();
+
+        setFormData({
+            company: loading || !profile.company ? '':profile.company,
+            location: loading || !profile.location ? '':profile.location,
+            status: loading || !profile.status ? '':profile.status,
+            intro: loading || !profile.intro ? '':profile.intro,
+            interested: loading || !profile.interested ? '':profile.interested,
+            youtube: loading || !profile.youtube ? '':profile.youtube,
+            facebook: loading || !profile.facebook ? '':profile.facebook,
+            twitter: loading || !profile.twitter ? '':profile.twitter,
+            instagram: loading || !profile.instagram ? '':profile.instagram,
+            linkedin: loading || !profile.linkedin ? '':profile.linkedin,
+        });
+    }, [loading]);
+
+    const {
+        company,
+        location,
+        status,
+        intro,
+        interested,
+        youtube,
+        facebook,
+        twitter,
+        instagram,
+        linkedin,
+    } = formData;
+
+    const onChange = e => setFormData({...formData, [e.target.name]: e.target.value});
+
+    const onSubmit = e=> {
+        e.preventDefault();
+        createProfile(formData,history);
+    }
+  return (
+    <Fragment>
+      <h1 className="large text-primary">
+        Create Your Profile
+      </h1>
+      <p className="lead">
+        <i className="fas fa-user"></i> Let's get some information to make your
+        profile stand out
+      </p>
+      <small>* = required field</small>
+      <form className="form" onSubmit={ e => onSubmit(e)}>
+        <div className="form-group">
+          <select name="status" value={status} onChange = {e=> onChange(e)}>
+            <option value="0">* Select Professional Status</option>
+            <option value="Developer">Developer</option>
+            <option value="Junior Developer">Junior Developer</option>
+            <option value="Senior Developer">Senior Developer</option>
+            <option value="Manager">Manager</option>
+            <option value="Student or Learning">Student or Learning</option>
+            <option value="Instructor">Instructor or Teacher</option>
+            <option value="Intern">Intern</option>
+            <option value="Other">Other</option>
+          </select>
+          <small className="form-text"
+            >Give us an idea of where you are at in your career</small
+          >
+        </div>
+        <div className="form-group">
+          <input type="text" placeholder="Company" name="company" value={company} onChange = {e=> onChange(e)}/>
+          <small className="form-text"
+            >Could be your own company or one you work for</small
+          >
+        </div>
+
+        <div className="form-group">
+          <input type="text" placeholder="Location" name="location" value={location} onChange = {e=> onChange(e)}/>
+          <small className="form-text"
+            >City & state suggested (eg. KowLoon, New Territories)</small
+          >
+        </div>
+        <div className="form-group">
+          <input type="text" placeholder="* Interests" name="interested" value={interested} onChange = {e=> onChange(e)}/>
+          <small className="form-text"
+            >Please use comma separated values (eg.
+            Climate Change, Volunteer Activities)</small
+          >
+        </div>
+
+        <div className="form-group">
+          <textarea placeholder="A short bio of yourself" name="intro" value={intro} onChange = {e=> onChange(e)}></textarea>
+          <small className="form-text">Tell us a little about yourself</small>
+        </div>
+
+        <div className="my-2">
+          <button 
+            onClick ={()=> toggleSocialInputs(!displaySocialInputs)}
+            type="button" 
+            className="btn btn-light"
+            >
+            Add Social Network Links
+          </button>
+          <span>Optional</span>
+        </div>
+
+        {displaySocialInputs && (
+        <Fragment>
+                <div className="form-group social-input">
+                    <i className="fab fa-twitter fa-2x"></i>
+                    <input type="text" placeholder="Twitter URL" name="twitter" value={twitter} onChange = {e=> onChange(e)}/>
+                </div>
+
+                <div className="form-group social-input">
+                    <i className="fab fa-facebook fa-2x"></i>
+                    <input type="text" placeholder="Facebook URL" name="facebook" value = {facebook} onChange = {e=> onChange(e)}/>
+                </div>
+
+                <div className="form-group social-input">
+                    <i className="fab fa-youtube fa-2x"></i>
+                    <input type="text" placeholder="YouTube URL" name="youtube" value = {youtube} onChange = {e=> onChange(e)}/>
+                </div>
+
+                <div className="form-group social-input">
+                    <i className="fab fa-linkedin fa-2x"></i>
+                    <input type="text" placeholder="Linkedin URL" name="linkedin" value = {linkedin} onChange = {e=> onChange(e)}/>
+                </div>
+
+                <div className="form-group social-input">
+                    <i className="fab fa-instagram fa-2x"></i>
+                    <input type="text" placeholder="Instagram URL" name="instagram" value = {instagram} onChange = {e=> onChange(e)}/>
+                </div>
+        </Fragment>)}
+
+        
+        <input type="submit" className="btn btn-primary my-1" />
+        <Link className="btn btn-light my-1" to="/dashboard">Go Back</Link>
+      </form>
+    </Fragment>
+  );
+};
+
+EditProfile.propTypes = {
+    createProfile: PropTypes.func.isRequired,
+    getCurrentProfile: PropTypes.func.isRequired,
+    profile: PropTypes.func.isRequired,
+};
+
+const mapStateToProps = state => ({
+    profile: state.profile
+});
+
+export default connect(
+    mapStateToProps, 
+    {createProfile, getCurrentProfile}
+)(withRouter(EditProfile));
+
+```
+
+- I got a bug in backend, and spent about more than 1 hour to figure out =))))))
+
+### 7. Add Education & Experiences:
+
+- In `actions/profile.js` we add 2 components for adding education and experiences
+
+```
+
+// Add experience
+
+export const addExperience = (formData, history) => async dispatch => {
+    try {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const res = await axios.put('/api/profile/experience',formData,config);
+
+        dispatch({
+            type: UPDATE_PROFILE,
+            payload: res.data
+        });
+
+        dispatch(setAlert('Experience Added','success'));
+        history.push('/dashboard')
+    } catch (err) {
+        const errors = err.response.data.errors;
+        if(errors){
+            errors.forEach(error => {
+                dispatch(setAlert(error.msg,'danger'))
+            });
+        }
+        dispatch({
+            type: PROFILE_ERROR,
+            payload: { msg: err.response.statusText, status: err.response.status}
+        });        
+    }
+}
+
+
+// Add education
+
+export const addEducation = (formData, history) => async dispatch => {
+    try {
+        const config = {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }
+
+        const res = await axios.put('/api/profile/education',formData,config);
+
+        dispatch({
+            type: UPDATE_PROFILE,
+            payload: res.data
+        });
+
+        dispatch(setAlert('Education Added','success'));
+        history.push('/dashboard')
+    } catch (err) {
+        const errors = err.response.data.errors;
+        if(errors){
+            errors.forEach(error => {
+                dispatch(setAlert(error.msg,'danger'))
+            });
+        }
+        dispatch({
+            type: PROFILE_ERROR,
+            payload: { msg: err.response.statusText, status: err.response.status}
+        });        
+    }
+}
+```
+
+- In `reducers/profile.js`, we add `case UPDATE_PROFILE` that is similar to `case GET_PROFILE`
+
+- In `profile-form`, create 2 files `AddExperience.js` and `AddEducation.js`
+
+  There is a small thing, when it is a current job, then the part `to` will be disable
+  
+  
+
+
+
+
+
+
 
 
 
