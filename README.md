@@ -2227,7 +2227,7 @@ export const addEducation = (formData, history) => async dispatch => {
   const Experience = ({experience}) => {
 
     const experiences = experience.map(exp =>{
-        <td key={exp._id}>
+        <tr key={exp._id}>
             <td>{exp.company}</td>
             <td className="hide-sm">{exp.title}</td>
             <td>
@@ -2242,7 +2242,7 @@ export const addEducation = (formData, history) => async dispatch => {
             <td>
                 <button className ='btn btn-danger'>Delete</button>
             </td>
-        </td>
+        </tr>
     });
     return (
         <Fragment>
@@ -2271,6 +2271,201 @@ export const addEducation = (formData, history) => async dispatch => {
   export default Experience
 
   ```
+  
+  - Then add this component to Dashboard:
+  
+  ```
+                  {profile !== null ? (
+                    <Fragment>
+                        <DashboardActions/>
+                        <Experience experience={profile.experience}/>
+                    </Fragment>
+                    ) :(
+                    <Fragment>
+                        <p>You have not yet setup a profile, please add some info</p>
+                        <Link to ='/create-profile' className="btn btn-primary my-1">
+                            Create Profile
+                        </Link>
+                    </Fragment>
+                )}
+  ```
+  
+  - We do similar to display the Education component
+  
+  ### 9. Delete Account, Education & Experience
+  
+  - I still dont understand the `dispatch` in the `actions/profile.js`
+
+```
+
+// Delete experience 
+export const deleteExperience = id => async dispatch =>{
+    try {
+        const res = await axios.delete(`/api/profile/experience/${id}`);
+
+        dispatch({
+            type: UPDATE_PROFILE,
+            payload: res.data
+        });
+
+        dispatch(setAlert('Experience Removed','success'));
+    } catch (err) {
+        dispatch({
+            type: PROFILE_ERROR,
+            payload: { msg: err.response.statusText, status: err.response.status}
+        });  
+    }
+}
+
+
+// Delete education
+export const deleteEducation = id => async dispatch =>{
+    try {
+        const res = await axios.delete(`/api/profile/education/${id}`);
+
+        dispatch({
+            type: UPDATE_PROFILE,
+            payload: res.data
+        });
+
+        dispatch(setAlert('Education Removed','success'));
+    } catch (err) {
+        dispatch({
+            type: PROFILE_ERROR,
+            payload: { msg: err.response.statusText, status: err.response.status}
+        });  
+    }
+}
+
+// Delete account & profile
+export const deleteAccount = id => async dispatch =>{
+    if (window.confirm('Make sure that you want to delete this account')){
+        
+        try {
+            const res = await axios.delete(`/api/profile`);
+    
+            dispatch({type: CLEAR_PROFILE});
+            dispatch({type: ACCOUNT_DELETED});
+    
+            dispatch(setAlert('Your account has been permanently deleted'));
+        } catch (err) {
+            dispatch({
+                type: PROFILE_ERROR,
+                payload: { msg: err.response.statusText, status: err.response.status}
+            });  
+        }
+    }
+}
+```
+
+- In `reducers/profile.js`: // I also dont understand the `reducers` folder. We add action `ACCOUNT_DELETED` to the file `reducers/auth.js`, like when we logout
+
+```
+import { 
+    GET_PROFILE,
+    PROFILE_ERROR,
+    CLEAR_PROFILE,
+    UPDATE_PROFILE,
+} from '../actions/type';
+const initialState = {
+    profile: null,
+    profiles: [],
+    loading: true,
+    error: {}
+}
+
+export default function (state = initialState,action){
+    const {type, payload} = action;
+
+    switch(type){
+        case GET_PROFILE:
+        case UPDATE_PROFILE:
+            return {
+                ...state, 
+                profile: payload,
+                loading: false
+            };
+
+        case PROFILE_ERROR:
+            return {
+                ...state,
+                error: payload,
+                loading: false
+            };
+        case CLEAR_PROFILE:
+            return{
+                ... state,
+                profile: null,
+                loading: false
+            }
+        default:
+            return state;
+    }
+}
+```
+
+- Now we use `connect` in `dashboard/Experience.js`
+
+```
+import React, { Fragment } from 'react'
+import PropTypes from 'prop-types'
+import Moment from 'react-moment'
+import { connect } from 'react-redux'
+import {deleteExperience} from '../../actions/profile'
+
+
+const Experience = ({experience, deleteExperience}) => {
+
+    const experiences = experience.map(exp =>(
+        <tr key={exp._id}>
+            <td>{exp.company}</td>
+            <td className="hide-sm">{exp.title}</td>
+            <td>
+                <Moment format = 'YYYY/MM/DD'>{exp.from}</Moment> - {
+                    exp.to === null ? (
+                        'Now'
+                        ):(
+                        <Moment format = 'YYYY/MM/DD'>{exp.from}</Moment>
+                        )
+                }
+            </td>
+            <td>
+                <button onClick={()=> deleteExperience(exp._id)} className ='btn btn-danger'>Delete</button>
+            </td>
+        </tr>
+    ));
+    return (
+        <Fragment>
+            <h2 className="my-2">Experience Credentials</h2>
+            <table className="table">
+                <thead>
+                    <tr>
+                        <th>Company</th>
+                        <th className="hide-sm">Title</th>
+                        <th className="hide-sm">Years</th>
+                        <th/>
+                    </tr>
+                </thead>
+                <tbody>
+                    {experiences}
+                </tbody>
+            </table>
+        </Fragment>
+    )
+}
+
+Experience.propTypes = {
+    experiences: PropTypes.array.isRequired,
+    deleteExperience: PropTypes.func.isRequired
+}
+
+export default connect(null,{deleteExperience})(Experience);
+
+```
+
+- And we do the same thing with `Education`. I also dont know where to use the `reducers` folder :))
+- Oh, when we delete Experience and Education, we dont need to do anything with `reducers`. I really need a map
+
   
   
   
