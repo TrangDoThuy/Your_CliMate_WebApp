@@ -1,12 +1,14 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState, useEffect } from 'react';
 import { Link, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { createProfile } from '../../actions/profile';
+import { createProfile, getCurrentProfile } from '../../actions/profile';
 
-const CreateProfile = ({
-  createProfile,
-  history
+const EditProfile = ({
+    profile:{profile, loading},
+    createProfile,
+    getCurrentProfile, 
+    history
 }) => {
     const [formData, setFormData] = useState({
         company: '',
@@ -21,7 +23,24 @@ const CreateProfile = ({
         linkedin: ''
     });
 
-    const [displaySocialInputs, toggleSocialInputs] = useState(true);
+    const [displaySocialInputs, toggleSocialInputs] = useState(false);
+
+    useEffect(()=>{
+        getCurrentProfile();
+
+        setFormData({
+            company: loading || !profile.company ? '':profile.company,
+            location: loading || !profile.location ? '':profile.location,
+            status: loading || !profile.status ? '':profile.status,
+            intro: loading || !profile.intro ? '':profile.intro,
+            interested: loading || !profile.interested ? '':profile.interested,
+            youtube: loading || !profile.youtube ? '':profile.youtube,
+            facebook: loading || !profile.facebook ? '':profile.facebook,
+            twitter: loading || !profile.twitter ? '':profile.twitter,
+            instagram: loading || !profile.instagram ? '':profile.instagram,
+            linkedin: loading || !profile.linkedin ? '':profile.linkedin,
+        });
+    }, [loading]);
 
     const {
         company,
@@ -40,7 +59,7 @@ const CreateProfile = ({
 
     const onSubmit = e=> {
         e.preventDefault();
-        createProfile(formData,history);
+        createProfile(formData,history,true);
     }
   return (
     <Fragment>
@@ -65,13 +84,14 @@ const CreateProfile = ({
             <option value="Intern">Intern</option>
             <option value="Other">Other</option>
           </select>
-          <small className="form-text"
-            >Give us an idea of where you are at in your career</small
-          >
+          <small className="form-text">
+            Give us an idea of where you are at in your career
+            </small>
         </div>
         <div className="form-group">
           <input type="text" placeholder="Company" name="company" value={company} onChange = {e=> onChange(e)}/>
-          <small className="form-text">Could be your own company or one you work for </small>
+          <small className="form-text">Could be your own company or one you work for</small>
+
         </div>
 
         <div className="form-group">
@@ -80,14 +100,13 @@ const CreateProfile = ({
         </div>
         <div className="form-group">
           <input type="text" placeholder="* Interests" name="interested" value={interested} onChange = {e=> onChange(e)}/>
-          <small className="form-text"
-            >Please use comma separated values (eg.
-            Climate Change, Volunteer Activities)</small>
+          <small className="form-text"> Please use comma separated values (eg.
+            Climate Change, Volunteer Activities) </small>
         </div>
 
         <div className="form-group">
           <textarea placeholder="A short bio of yourself" name="intro" value={intro} onChange = {e=> onChange(e)}></textarea>
-          <small className="form-text">Tell us a little about yourself</small>
+          <small className="form-text"> Tell us a little about yourself </small>
         </div>
 
         <div className="my-2">
@@ -137,8 +156,18 @@ const CreateProfile = ({
   );
 };
 
-CreateProfile.propTypes = {
+EditProfile.propTypes = {
+
     createProfile: PropTypes.func.isRequired,
+    getCurrentProfile: PropTypes.func.isRequired,
+    profile: PropTypes.object.isRequired,
 };
 
-export default connect(null, {createProfile})(withRouter(CreateProfile));
+const mapStateToProps = state => ({
+    profile: state.profile
+});
+
+export default connect(
+    mapStateToProps, 
+    {createProfile, getCurrentProfile}
+)(withRouter(EditProfile));
